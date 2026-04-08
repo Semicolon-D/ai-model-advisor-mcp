@@ -59,16 +59,30 @@ async function fetchAllFalModels(): Promise<FalModel[]> {
     url.searchParams.set("limit", "200");
     if (cursor) url.searchParams.set("cursor", cursor);
 
-    const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error(`fal.ai API error: ${response.status} ${response.statusText}`);
-    }
+    let retries = 3;
+    while (retries > 0) {
+      const response = await fetch(url.toString());
+      if (response.status === 429) {
+        retries--;
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+      if (!response.ok) {
+        throw new Error(`fal.ai API error: ${response.status} ${response.statusText}`);
+      }
 
-    const data = await response.json();
-    const models = data.models as FalModel[];
-    allModels.push(...models.filter((m) => m.metadata.status === "active"));
-    cursor = data.next_cursor ?? null;
-    hasMore = data.has_more === true && cursor !== null;
+      const data = await response.json();
+      const models = data.models as FalModel[];
+      allModels.push(...models.filter((m) => m.metadata.status === "active"));
+      cursor = data.next_cursor ?? null;
+      hasMore = data.has_more === true && cursor !== null;
+      break;
+    }
+    
+    if (retries === 0) {
+      // If we exhausted retries due to 429, just return what we have so far
+      break;
+    }
   }
 
   return allModels;
