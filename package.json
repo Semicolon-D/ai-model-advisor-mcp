@@ -1,0 +1,55 @@
+{
+  "name": "model-advisor-mcp",
+  "version": "1.0.0",
+  "description": "The most comprehensive AI model advisor MCP. Compare pricing, capabilities, and quality across 500+ models — LLMs, image gen, video gen, TTS, STT, and 3D — from OpenRouter and fal.ai.",
+  "type": "module",
+  "main": "build/server.js",
+  "bin": {
+    "model-advisor-mcp": "build/cli.js"
+  },
+  "files": [
+    "build",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/cli.js",
+    "dev": "tsc --watch",
+    "test": "npm run build && node --test build/server.test.js",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "llm",
+    "pricing",
+    "model-selection",
+    "openrouter",
+    "fal",
+    "image-generation",
+    "video-generation",
+    "text-to-speech",
+    "speech-to-text",
+    "compare",
+    "advisor",
+    "antigravity"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Semicolon-D/model-advisor-mcp.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
+  }
+}
