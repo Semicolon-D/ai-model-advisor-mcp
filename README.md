@@ -1,23 +1,25 @@
-# ai-model-advisor-mcp
+# AI Model Advisor MCP Server
 
-The most comprehensive AI model advisor MCP server. Compare pricing, capabilities, and quality across **1000+ models** from **5 providers** — LLMs, image gen, video gen, TTS, STT, and 3D.
+The ultimate **Model Context Protocol (MCP)** server for AI model discovery and cost optimization. Fully compatible with **Claude Desktop**, **Cursor**, and any MCP client. 
+
+Compare pricing, capabilities, and quality across **1000+ models** from **5 top providers** (OpenRouter, fal.ai, Together AI, Replicate, and Fireworks AI).
 
 > **"Where's Llama 3.3 cheapest?"**
-> Just ask. Your agent shops across all providers instantly.
+> Just ask your agent. It shops across all providers instantly.
 
-## Why?
+## Why use this MCP Server?
 
-New AI models drop constantly across dozens of platforms. Your coding agent has no idea what's available, what things cost, or which provider is cheapest. This MCP fixes that — giving your agent live access to:
+New AI models drop constantly across dozens of platforms. Your AI coding agent (like Claude or Cursor) doesn't inherently know what's available, what inference costs, or which provider is currently cheapest. This MCP fixes that by giving your agent live, programmatic access to:
 
-- 🧠 **300+ LLMs** via OpenRouter (GPT-4o, Claude, Gemini, Llama, Mistral, etc.)
-- 🎨 **200+ Media models** via fal.ai (Flux, Stable Diffusion, Kling Video, Whisper, etc.)
-- ⚡ **200+ Open-source models** via Together AI (Llama, DeepSeek, Qwen, Mistral, etc.)
-- 🔁 **Community models** via Replicate (Flux, Wan 2.1, Recraft, custom models, etc.)
-- 🔥 **Fast inference models** via Fireworks AI (Llama, DeepSeek, Mixtral, etc.)
-- 🏷️ **Cross-provider price shopping** — find where any model is cheapest
-- 💰 **Real pricing** — works out of the box, no API keys needed
-- ⭐ **Curated quality tiers** (S/A/B/C) for 50+ popular models
-- 🆕 **New model discovery** — know when models drop
+- 🧠 **300+ LLMs** via OpenRouter API (GPT-4o, Claude 3.7, Gemini 2.5, Llama, Mistral, DeepSeek)
+- 🎨 **200+ Media models** via fal.ai API (Flux Pro, Stable Diffusion, Kling Video, Whisper)
+- ⚡ **200+ Open-source models** via Together AI (Llama 3.3, Qwen, Mistral)
+- 🔁 **Community models** via Replicate (Wan 2.1, Recraft, custom Loras)
+- 🔥 **Fast inference models** via Fireworks AI
+- 🏷️ **Cross-provider price calculator** — find the cheapest API endpoint for any architecture
+- 💰 **Real-time pricing** — powered by our cloud backend (no API keys needed)
+- ⭐ **Curated quality tiers** (S/A/B/C) to prevent agents from picking outdated models
+- 🆕 **Discovery engine** — agents can ask "what new models dropped this week?"
 
 ## Quick Start
 
