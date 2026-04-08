@@ -2,3 +2,10 @@ node_modules/
 build/
 *.tgz
 .DS_Store
+
+# Secrets & env files
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+*.local
