@@ -67,6 +67,24 @@ export interface UnifiedModel {
   licenseType?: string;
   /** Tags from the provider */
   tags?: string[];
+
+  // ─── Performance & Benchmarks ────────────────────────────────────
+  /** Speed metrics (mostly for LLMs) */
+  speed?: {
+    /** Time to first token (seconds) */
+    ttft?: number;
+    /** Generation throughput (tokens per second) */
+    throughput?: number;
+  };
+  /** Intelligence benchmark scores */
+  benchmarks?: {
+    /** Massive Multitask Language Understanding (0-100) */
+    mmlu?: number;
+    /** Coding benchmarks (e.g. LiveCodeBench or Aider pass%) */
+    coding?: number;
+    /** Math benchmarks (e.g. MATH or GSM8k) */
+    math?: number;
+  };
 }
 
 // ─── Provider Interface ─────────────────────────────────────────────────────

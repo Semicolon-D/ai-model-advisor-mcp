@@ -26,6 +26,15 @@ interface APIModel {
   provider: string;
   category: string;
   pricing: APIPricing;
+  speed?: {
+    ttft?: number;
+    throughput?: number;
+  };
+  benchmarks?: {
+    mmlu?: number;
+    coding?: number;
+    math?: number;
+  };
 }
 
 interface APIResponse {
@@ -60,6 +69,8 @@ async function fetchFromPricingAPI(): Promise<UnifiedModel[]> {
       formatted: m.pricing.formatted,
     },
     capabilities: [],
+    speed: m.speed,
+    benchmarks: m.benchmarks,
   }));
 }
 

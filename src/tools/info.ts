@@ -65,6 +65,23 @@ export function handleGetModelInfo(
     lines.push("");
   }
 
+  // Speed metrics
+  if (model.speed?.ttft !== undefined || model.speed?.throughput !== undefined) {
+    lines.push(`## Speed`);
+    if (model.speed.ttft !== undefined) lines.push(`- Time to First Token: ${model.speed.ttft.toFixed(2)}s`);
+    if (model.speed.throughput !== undefined) lines.push(`- Throughput: ${model.speed.throughput.toFixed(1)} tokens/sec`);
+    lines.push("");
+  }
+
+  // Benchmark scores
+  if (model.benchmarks?.mmlu !== undefined || model.benchmarks?.coding !== undefined || model.benchmarks?.math !== undefined) {
+    lines.push(`## Benchmarks`);
+    if (model.benchmarks.mmlu !== undefined) lines.push(`- MMLU: ${model.benchmarks.mmlu.toFixed(1)}`);
+    if (model.benchmarks.coding !== undefined) lines.push(`- Coding: ${model.benchmarks.coding.toFixed(1)}`);
+    if (model.benchmarks.math !== undefined) lines.push(`- Math: ${model.benchmarks.math.toFixed(1)}`);
+    lines.push("");
+  }
+
   // Capabilities
   if (model.capabilities.length > 0) {
     lines.push(

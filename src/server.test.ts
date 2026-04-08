@@ -168,7 +168,9 @@ describe("handleCompareModels", () => {
     const text = result.content[0].text;
     assert.ok(text.includes("|")); // table
     assert.ok(text.includes("Tools"));
-    assert.ok(text.includes("Reasoning"));
+    assert.ok(text.includes("Reason"));
+    assert.ok(text.includes("Speed"));
+    assert.ok(text.includes("MMLU"));
     assert.ok(text.includes("✅"));
   });
 

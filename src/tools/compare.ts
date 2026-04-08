@@ -50,10 +50,13 @@ export function handleCompareModels(
     const capFlag = (m: UnifiedModel, cap: string) =>
       m.capabilities.includes(cap) ? "✅" : "❌";
 
-    header = `| Model | Provider | Pricing | Context | Tools | Reasoning | Vision | Quality |`;
-    separator = `|-------|----------|---------|---------|-------|-----------|--------|---------|`;
+    const fmtSpeed = (n?: number) => n !== undefined ? n.toFixed(1) : "—";
+    const fmtMMLU = (n?: number) => n !== undefined ? n.toFixed(1) : "—";
+
+    header = `| Model | Provider | Pricing | Context | Speed (TTFT/Tps) | MMLU | Tools | Reason | Vision | Quality |`;
+    separator = `|-------|----------|---------|---------|------------------|------|-------|--------|--------|---------|`;
     rows = found.map((m) =>
-      `| ${m.id} | ${m.provider} | ${m.pricing.formatted} | ${m.contextLength?.toLocaleString() ?? "N/A"} | ${capFlag(m, "tool_use")} | ${capFlag(m, "reasoning")} | ${capFlag(m, "vision")} | ${m.qualityTier ?? "—"} |`
+      `| ${m.id} | ${m.provider} | ${m.pricing.formatted} | ${m.contextLength?.toLocaleString() ?? "N/A"} | ${fmtSpeed(m.speed?.ttft)}s / ${fmtSpeed(m.speed?.throughput)} | ${fmtMMLU(m.benchmarks?.mmlu)} | ${capFlag(m, "tool_use")} | ${capFlag(m, "reasoning")} | ${capFlag(m, "vision")} | ${m.qualityTier ?? "—"} |`
     );
   } else if (!hasLLMs && hasMedia) {
     // All media: show media-specific cols

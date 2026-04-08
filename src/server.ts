@@ -20,7 +20,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "recommend_model",
     description:
-      "Recommend the best AI model for a task. Searches across 1000+ models spanning LLMs, image gen, video gen, TTS, STT, 3D, and more from 5 providers (OpenRouter, fal.ai, Together AI, Replicate, Fireworks). Returns ranked results based on task match, capabilities, quality tier, and price.",
+      "Recommend the best AI model for a task. Searches across 1000+ models spanning LLMs, image gen, video gen, TTS, STT, 3D, and more from 5 providers (OpenRouter, fal.ai, Together AI, Replicate, Fireworks). Returns ranked results based on task match, capabilities, quality tier, price, speed (TTFT/throughput), and intelligence benchmarks (MMLU/coding).",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -51,7 +51,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "compare_models",
     description:
-      "Compare AI models side-by-side in a table. Works across providers and categories — compare LLMs against each other, image generators, or even mix categories. Auto-adapts columns based on model types.",
+      "Compare AI models side-by-side in a table. Works across providers and categories — compare LLMs against each other, image generators, or even mix categories. Auto-adapts columns based on model types. Includes speed metrics (TTFT, tokens/sec) and benchmark scores (MMLU) when available.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -101,7 +101,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "get_model_info",
     description:
-      "Get a comprehensive model card for any AI model. Includes description, pricing breakdown, capabilities, quality tier, context length (LLMs), tags, license, and more.",
+      "Get a comprehensive model card for any AI model. Includes description, pricing breakdown, capabilities, quality tier, context length (LLMs), speed metrics (TTFT, throughput), benchmark scores (MMLU, coding), tags, license, and more.",
     inputSchema: {
       type: "object" as const,
       properties: {

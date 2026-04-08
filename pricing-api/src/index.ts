@@ -16,6 +16,7 @@ export interface Env {
   TOGETHER_API_KEY?: string;
   REPLICATE_API_TOKEN?: string;
   FIREWORKS_API_KEY?: string;
+  ARTIFICIAL_ANALYSIS_API_KEY?: string;
 }
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -31,6 +32,15 @@ interface ModelPricing {
     inputPrice?: number;
     outputPrice?: number;
     formatted: string;
+  };
+  speed?: {
+    ttft?: number;
+    throughput?: number;
+  };
+  benchmarks?: {
+    mmlu?: number;
+    coding?: number;
+    math?: number;
   };
 }
 
@@ -242,6 +252,41 @@ async function fetchFireworks(apiKey: string): Promise<ModelPricing[]> {
     });
 }
 
+// ─── Artificial Analysis Benchmarks ───────────────────────────────────────────
+
+async function fetchPerformanceStats(apiKey: string): Promise<Record<string, any>> {
+  const res = await fetch("https://artificialanalysis.ai/api/v2/data/llms/models", {
+    headers: { "x-api-key": apiKey },
+  });
+  if (!res.ok) throw new Error(`AA API error: ${res.status}`);
+  const data: any = await res.json();
+  const performanceMap: Record<string, any> = {};
+  
+  // Handle various response shapes: {data: [...]}, {models: [...]}, [...], or {slug: {...}, ...}
+  let modelList: any[];
+  if (Array.isArray(data)) {
+    modelList = data;
+  } else if (Array.isArray(data?.data)) {
+    modelList = data.data;
+  } else if (Array.isArray(data?.models)) {
+    modelList = data.models;
+  } else if (typeof data === "object" && data !== null) {
+    // Dict keyed by slug/id — convert values to array, attach the key as slug
+    modelList = Object.entries(data).map(([key, val]: [string, any]) => ({
+      ...val,
+      slug: val?.slug ?? key,
+    }));
+  } else {
+    throw new Error("Unexpected AA API response shape");
+  }
+  
+  for (const m of modelList) {
+    if (m.slug) performanceMap[m.slug.toLowerCase()] = m;
+    if (m.name) performanceMap[m.name.toLowerCase()] = m;
+  }
+  return performanceMap;
+}
+
 // ─── Cron: Refresh all pricing ──────────────────────────────────────────────
 
 async function refreshPricing(env: Env): Promise<PricingSnapshot> {
@@ -307,6 +352,61 @@ async function refreshPricing(env: Env): Promise<PricingSnapshot> {
     }
   } else {
     providers["fireworks"] = { count: 0, status: "skipped: no FIREWORKS_API_KEY" };
+  }
+
+  // Fetch benchmark data if available
+  let performanceStats: Record<string, any> = {};
+  if (env.ARTIFICIAL_ANALYSIS_API_KEY) {
+    try {
+      performanceStats = await fetchPerformanceStats(env.ARTIFICIAL_ANALYSIS_API_KEY);
+      providers["artificial_analysis"] = { count: Object.keys(performanceStats).length, status: "ok" };
+    } catch (e: any) {
+      providers["artificial_analysis"] = { count: 0, status: `error: ${e.message}` };
+    }
+  }
+
+  // Merge benchmarks into models
+  if (Object.keys(performanceStats).length > 0) {
+    // Normalize function: strip dots, hyphens, underscores for fuzzy slug comparison
+    const norm = (s: string) => s.toLowerCase().replace(/[-_.]/g, "");
+    
+    // Pre-build a normalized lookup for faster matching
+    const normMap = new Map<string, any>();
+    for (const [key, val] of Object.entries(performanceStats)) {
+      normMap.set(norm(key), val);
+    }
+    
+    for (const model of allModels) {
+      if (!model.id) continue;
+      const slug = model.id.split("/").pop()?.toLowerCase() || "";
+      const normSlug = norm(slug);
+      
+      // Try exact normalized match first, then substring match
+      let stats = normMap.get(normSlug);
+      if (!stats) {
+        for (const [nk, val] of normMap) {
+          if (normSlug.includes(nk) || nk.includes(normSlug)) {
+            stats = val;
+            break;
+          }
+        }
+      }
+      
+      if (stats) {
+        const ttft = stats.median_time_to_first_token_seconds ?? undefined;
+        const throughput = stats.median_output_tokens_per_second ?? undefined;
+        const mmlu = stats.evaluations?.mmlu_pro != null ? stats.evaluations.mmlu_pro * 100 : undefined;
+        const coding = stats.evaluations?.artificial_analysis_coding_index ?? undefined;
+        const math = stats.evaluations?.artificial_analysis_math_index ?? undefined;
+        
+        if (ttft !== undefined || throughput !== undefined) {
+          model.speed = { ttft, throughput };
+        }
+        if (mmlu !== undefined || coding !== undefined) {
+          model.benchmarks = { mmlu, coding, math };
+        }
+      }
+    }
   }
 
   const snapshot: PricingSnapshot = {

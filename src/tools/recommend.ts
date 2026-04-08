@@ -64,6 +64,30 @@ function matchesRequirements(model: UnifiedModel, requirements: string[]): numbe
   else if (model.qualityTier === "B") score += 2;
   else if (model.qualityTier === "C") score += 1;
 
+  // Benchmark and speed bonuses based on actual text
+  const reqStr = lower.join(" ");
+  if (reqStr.includes("fast") || reqStr.includes("speed")) {
+    if (model.speed?.throughput) {
+      if (model.speed.throughput > 100) score += 4;
+      else if (model.speed.throughput > 50) score += 2;
+    }
+    if (model.speed?.ttft && model.speed.ttft < 0.5) score += 2;
+  }
+  
+  if (reqStr.includes("code") || reqStr.includes("coding")) {
+    if (model.benchmarks?.coding) {
+      if (model.benchmarks.coding > 80) score += 4;
+      else if (model.benchmarks.coding > 60) score += 2;
+    }
+  }
+
+  if (reqStr.includes("smart") || reqStr.includes("intelligence") || reqStr.includes("reasoning")) {
+    if (model.benchmarks?.mmlu) {
+      if (model.benchmarks.mmlu > 85) score += 4;
+      else if (model.benchmarks.mmlu > 75) score += 2;
+    }
+  }
+
   return score;
 }
 
