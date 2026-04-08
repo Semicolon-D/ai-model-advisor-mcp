@@ -1,55 +1,79 @@
 # ai-model-advisor-mcp
 
-The most comprehensive AI model advisor MCP server. Compare pricing, capabilities, and quality across **500+ models** — LLMs, image gen, video gen, TTS, STT, and 3D — from OpenRouter and fal.ai.
+The most comprehensive AI model advisor MCP server. Compare pricing, capabilities, and quality across **1000+ models** from **5 providers** — LLMs, image gen, video gen, TTS, STT, and 3D.
 
-> **"I need to generate images — what's the best model for my budget?"**
-> Just ask. Your agent now knows.
+> **"Where's Llama 3.3 cheapest?"**
+> Just ask. Your agent shops across all providers instantly.
 
 ## Why?
 
-New AI models drop constantly. Your coding agent has no idea what's available, what things cost, or which model is best for your task. This MCP fixes that — giving your agent live access to:
+New AI models drop constantly across dozens of platforms. Your coding agent has no idea what's available, what things cost, or which provider is cheapest. This MCP fixes that — giving your agent live access to:
 
 - 🧠 **300+ LLMs** via OpenRouter (GPT-4o, Claude, Gemini, Llama, Mistral, etc.)
 - 🎨 **200+ Media models** via fal.ai (Flux, Stable Diffusion, Kling Video, Whisper, etc.)
-- 💰 **Live pricing** for every model
+- ⚡ **200+ Open-source models** via Together AI (Llama, DeepSeek, Qwen, Mistral, etc.)
+- 🔁 **Community models** via Replicate (Flux, Wan 2.1, Recraft, custom models, etc.)
+- 🔥 **Fast inference models** via Fireworks AI (Llama, DeepSeek, Mixtral, etc.)
+- 🏷️ **Cross-provider price shopping** — find where any model is cheapest
+- 💰 **Real pricing** — works out of the box, no API keys needed
 - ⭐ **Curated quality tiers** (S/A/B/C) for 50+ popular models
 - 🆕 **New model discovery** — know when models drop
 
 ## Quick Start
 
-### Claude Desktop / Antigravity / Cursor
+### Zero-config (No API keys required)
 
-Add to your MCP config:
+The server works **entirely out-of-the-box**. Just add it to your MCP settings and save:
 
 ```json
 {
   "mcpServers": {
     "model-advisor": {
       "command": "npx",
-      "args": ["-y", "ai-model-advisor-mcp"],
-      "env": {
-        "FAL_KEY": "your-fal-key-here",
-        "OPENROUTER_API_KEY": "your-openrouter-key-here"
-      }
+      "args": ["-y", "ai-model-advisor-mcp@latest"]
     }
   }
 }
 ```
 
-### API Keys
+That's it! Live pricing for **all 1,000+ models** across all 5 providers is fetched automatically using our hosted Cloudflare Worker Pricing API. No API keys, no environment variables, no setup.
 
-| Key | Required? | What it enables |
-|-----|-----------|----------------|
-| `FAL_KEY` | Optional | fal.ai pricing data (model listing works without it) |
-| `OPENROUTER_API_KEY` | Optional | Better rate limits for OpenRouter API |
+## Tools (8 total)
 
-**Both keys are optional.** The server works without them — you'll get model listings and capabilities, just without fal.ai pricing.
+### 🏷️ `find_cheapest_provider` ⭐ NEW
 
-## Tools
+The killer feature. Shop for a model across all 5 providers.
+
+```
+find_cheapest_provider({ model: "llama 3.3 70b" })
+```
+
+Output:
+```
+🏷️ Price comparison for "llama 3.3 70b"
+
+| Provider    | Input $/1M | Output $/1M | Model ID                                         |
+|-------------|-----------|------------|--------------------------------------------------|
+| OpenRouter  | $0.00     | $0.00      | meta-llama/llama-3.3-70b-instruct                |
+| Together AI | $0.88     | $0.88      | meta-llama/Llama-3.3-70B-Instruct-Turbo          |
+| Fireworks   | $0.90     | $0.90      | accounts/fireworks/models/llama-v3p3-70b-instruct |
+
+💡 Cheapest: OpenRouter — FREE
+```
+
+Uses fuzzy matching — handles version format differences (v3p3 = 3.3) across providers.
+
+### 📦 `batch_get_pricing` ⭐ NEW
+
+Get pricing for multiple models in a single call. Returns a compact table.
+
+```
+batch_get_pricing({ model_ids: ["openai/gpt-4o", "anthropic/claude-sonnet-4", "fal-ai/flux-pro/v1.1", "meta-llama/Llama-3.3-70B-Instruct-Turbo"] })
+```
 
 ### 🎯 `recommend_model`
 
-"I need X" → ranked models matching your task, requirements, and budget.
+"I need X" → ranked models matching your task, requirements, and budget. Searches all 5 providers.
 
 ```
 recommend_model({ task: "image generation", requirements: ["photorealistic", "fast"], budget: "low" })
@@ -69,8 +93,8 @@ Browse and filter by category, provider, capability, or price.
 
 ```
 list_models({ category: "text-to-image", max_price: 0.05 })
-list_models({ provider: "fal", category: "text-to-video" })
-list_models({ capability: "reasoning" })
+list_models({ provider: "together", category: "llm" })
+list_models({ provider: "replicate", category: "text-to-video" })
 ```
 
 ### 📖 `get_model_info`
@@ -99,20 +123,31 @@ whats_new({ since: "7d" })
 whats_new({ since: "30d", category: "text-to-video" })
 ```
 
+## Providers
+
+| Provider | Models | Type | Hosted Pricing Data |
+|----------|--------|------|------------------|
+| [OpenRouter](https://openrouter.ai) | 350+ | LLMs | ✅ Yes |
+| [fal.ai](https://fal.ai) | 40+ | Image, Video, Audio, 3D | ✅ Yes |
+| [Together AI](https://together.ai) | 220+ | LLMs, Image | ✅ Yes |
+| [Replicate](https://replicate.com) | 120+ | Everything | ✅ Yes |
+| [Fireworks AI](https://fireworks.ai) | 12+ | LLMs | ✅ Yes |
+
 ## Categories
 
 | Category | Examples |
 |----------|---------|
-| `llm` | GPT-4o, Claude, Gemini, Llama, Mistral |
-| `text-to-image` | Flux Pro, Stable Diffusion, DALL-E |
-| `image-to-image` | Flux Edit, img2img pipelines |
-| `text-to-video` | Kling, Minimax, Hunyuan |
-| `image-to-video` | Kling i2v, Runway |
+| `llm` | GPT-4o, Claude, Gemini, Llama, Mistral, DeepSeek |
+| `text-to-image` | Flux Pro, Stable Diffusion, DALL-E, Ideogram, Recraft |
+| `image-to-image` | Flux Edit, img2img pipelines, upscalers |
+| `text-to-video` | Kling, Minimax, Hunyuan, Wan 2.1 |
+| `image-to-video` | Kling i2v, Runway, Wan i2v |
 | `text-to-speech` | Kokoro, ElevenLabs |
 | `speech-to-text` | Wizper (Whisper) |
 | `text-to-audio` | Music/sound generation |
 | `image-to-3d` | Hunyuan3D, Trellis |
 | `vision` | Visual understanding models |
+| `embedding` | Text embedding models |
 
 ## Quality Tiers
 
@@ -123,12 +158,21 @@ Popular models are rated on a curated quality scale:
 - **B** — Good (Mistral Small, Flux Schnell, SD3.5 Turbo)
 - **C** — Adequate
 
-## Data Sources
+## Architecture
 
-| Provider | Models | Auth | What |
-|----------|--------|------|------|
-| [OpenRouter](https://openrouter.ai) | 300+ LLMs | Optional | Pricing, capabilities, descriptions, params |
-| [fal.ai](https://fal.ai) | 200+ media models | Optional (pricing only) | Image/video/audio/3D models with pricing |
+```
+Agent → MCP Server → Cloudflare Worker Pricing API (Our Hosted Backend)
+                         ├─ Fetches from OpenRouter (350+ models)
+                         ├─ Fetches from fal.ai (40+ models)
+                         ├─ Fetches from Together AI (220+ models)
+                         ├─ Fetches from Replicate (120+ models)
+                         └─ Fetches from Fireworks AI (12+ models)
+
+Unified Model Registry
+→ recommend, compare, list, info, estimate, shop, batch
+```
+
+The MCP Server connects to our blazing-fast Cloudflare Worker that aggregates live pricing data across all 5 providers on a recurring 6-hour cron schedule. This gives your agent real-time pricing awareness without requiring you to juggle 5 different API keys.
 
 ## License
 

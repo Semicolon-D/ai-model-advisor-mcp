@@ -1,0 +1,10 @@
+name = "model-advisor-pricing"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[triggers]
+crons = ["0 */6 * * *"]  # Every 6 hours
+
+[[kv_namespaces]]
+binding = "PRICING_KV"
+id = "9e82be1518bb4c0ba397f9af07d210d4"

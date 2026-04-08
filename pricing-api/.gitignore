@@ -1,0 +1,5 @@
+.dev.vars
+.dev.vars.json
+.env
+.env.local
+node_modules/

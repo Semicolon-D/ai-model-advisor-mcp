@@ -10,6 +10,8 @@ import { handleListModels } from "./tools/list.js";
 import { handleGetModelInfo } from "./tools/info.js";
 import { handleEstimateCost } from "./tools/estimate.js";
 import { handleWhatsNew } from "./tools/discover.js";
+import { handleFindCheapestProvider } from "./tools/shop.js";
+import { handleBatchGetPricing } from "./tools/batch.js";
 import type { UnifiedModel } from "./types.js";
 
 // ─── Tool Definitions ───────────────────────────────────────────────────────
@@ -18,7 +20,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "recommend_model",
     description:
-      "Recommend the best AI model for a task. Searches across 500+ models spanning LLMs, image gen, video gen, TTS, STT, 3D, and more. Returns ranked results based on task match, capabilities, quality tier, and price.",
+      "Recommend the best AI model for a task. Searches across 1000+ models spanning LLMs, image gen, video gen, TTS, STT, 3D, and more from 5 providers (OpenRouter, fal.ai, Together AI, Replicate, Fireworks). Returns ranked results based on task match, capabilities, quality tier, and price.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -66,7 +68,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "list_models",
     description:
-      "List and filter available AI models. Filter by category (llm, text-to-image, text-to-video, text-to-speech, speech-to-text, image-to-3d, etc.), provider (openrouter, fal), capability, or max price.",
+      "List and filter available AI models from all 5 providers. Filter by category (llm, text-to-image, text-to-video, text-to-speech, speech-to-text, image-to-3d, etc.), provider (openrouter, fal, together, replicate, fireworks), capability, or max price.",
     inputSchema: {
       type: "object" as const,
       properties: {
@@ -77,8 +79,8 @@ export const TOOL_DEFINITIONS = [
         },
         provider: {
           type: "string",
-          description: "Filter by provider: openrouter, fal",
-          enum: ["openrouter", "fal"],
+          description: "Filter by provider: openrouter, fal, together, replicate, fireworks",
+          enum: ["openrouter", "fal", "together", "replicate", "fireworks"],
         },
         capability: {
           type: "string",
@@ -106,7 +108,7 @@ export const TOOL_DEFINITIONS = [
         model_id: {
           type: "string",
           description:
-            'The full model ID (e.g. "openai/gpt-4o", "fal-ai/flux-pro/v1.1", "fal-ai/kling-video/v2.0/master")',
+            'The full model ID (e.g. "openai/gpt-4o", "fal-ai/flux-pro/v1.1", "meta-llama/Llama-3.3-70B-Instruct-Turbo")',
         },
       },
       required: ["model_id"],
@@ -155,6 +157,39 @@ export const TOOL_DEFINITIONS = [
       },
     },
   },
+  {
+    name: "find_cheapest_provider",
+    description:
+      'Find the cheapest provider for a given model. Searches across all 5 providers to find where a model (e.g. "llama 3.3 70b", "flux pro", "deepseek r1") is available and compares pricing. Uses fuzzy matching to find the same model across different providers.',
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        model: {
+          type: "string",
+          description:
+            'The model to shop for, e.g. "llama 3.3 70b", "flux pro", "deepseek v3", "mistral small"',
+        },
+      },
+      required: ["model"],
+    },
+  },
+  {
+    name: "batch_get_pricing",
+    description:
+      "Get pricing for multiple models in a single call. Returns a compact table with pricing for all requested models. Much faster than calling get_model_info one at a time.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        model_ids: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            'Array of model IDs to get pricing for. Example: ["fal-ai/flux-pro/v1.1", "fal-ai/flux/schnell", "openai/gpt-4o"]',
+        },
+      },
+      required: ["model_ids"],
+    },
+  },
 ];
 
 // ─── Handler dispatch ───────────────────────────────────────────────────────
@@ -168,13 +203,15 @@ const HANDLER_MAP: Record<string, ToolHandler> = {
   get_model_info: handleGetModelInfo,
   estimate_cost: handleEstimateCost,
   whats_new: handleWhatsNew,
+  find_cheapest_provider: handleFindCheapestProvider,
+  batch_get_pricing: handleBatchGetPricing,
 };
 
 // ─── Server ─────────────────────────────────────────────────────────────────
 
 export function createServer(): Server {
   const server = new Server(
-    { name: "model-advisor-mcp", version: "1.0.0" },
+    { name: "model-advisor-mcp", version: "2.0.0" },
     { capabilities: { tools: {} } }
   );
 

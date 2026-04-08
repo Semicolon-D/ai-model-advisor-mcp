@@ -1,5 +1,6 @@
 import { cached } from "../cache.js";
 import type { UnifiedModel, ModelProvider, ModelCategory } from "../types.js";
+import { STATIC_FAL_PRICING, type StaticFalPrice } from "../data/fal-pricing.js";
 
 // ─── Raw fal types ──────────────────────────────────────────────────────────
 
@@ -88,34 +89,47 @@ async function fetchAllFalModels(): Promise<FalModel[]> {
   return allModels;
 }
 
-// ─── Fetch pricing (auth required) ──────────────────────────────────────────
+// ─── Fetch pricing (live API with static fallback) ──────────────────────────
 
 async function fetchFalPricing(endpointIds: string[]): Promise<Map<string, FalPriceEntry>> {
-  const falKey = process.env.FAL_KEY;
-  if (!falKey) return new Map();
-
   const priceMap = new Map<string, FalPriceEntry>();
 
-  // Batch in groups of 50
-  for (let i = 0; i < endpointIds.length; i += 50) {
-    const batch = endpointIds.slice(i, i + 50);
-    const url = new URL("https://api.fal.ai/v1/models/pricing");
-    for (const id of batch) {
-      url.searchParams.append("endpoint_id", id);
-    }
-
-    try {
-      const response = await fetch(url.toString(), {
-        headers: { Authorization: `Key ${falKey}` },
+  // 1. Seed with static fallback pricing (always available, no key needed)
+  for (const id of endpointIds) {
+    const staticPrice = STATIC_FAL_PRICING[id];
+    if (staticPrice) {
+      priceMap.set(id, {
+        endpoint_id: id,
+        unit_price: staticPrice.unit_price,
+        unit: staticPrice.unit,
+        currency: staticPrice.currency,
       });
-      if (!response.ok) continue;
+    }
+  }
 
-      const data = await response.json();
-      for (const entry of (data.prices ?? []) as FalPriceEntry[]) {
-        priceMap.set(entry.endpoint_id, entry);
+  // 2. If FAL_KEY is available, override with live API data (more up-to-date)
+  const falKey = process.env.FAL_KEY;
+  if (falKey) {
+    for (let i = 0; i < endpointIds.length; i += 50) {
+      const batch = endpointIds.slice(i, i + 50);
+      const url = new URL("https://api.fal.ai/v1/models/pricing");
+      for (const id of batch) {
+        url.searchParams.append("endpoint_id", id);
       }
-    } catch {
-      // Continue without pricing for this batch
+
+      try {
+        const response = await fetch(url.toString(), {
+          headers: { Authorization: `Key ${falKey}` },
+        });
+        if (!response.ok) continue;
+
+        const data = await response.json();
+        for (const entry of (data.prices ?? []) as FalPriceEntry[]) {
+          priceMap.set(entry.endpoint_id, entry);
+        }
+      } catch {
+        // Live API failed — static fallback is already in the map
+      }
     }
   }
 
@@ -125,7 +139,7 @@ async function fetchFalPricing(endpointIds: string[]): Promise<Map<string, FalPr
 // ─── Price formatting ───────────────────────────────────────────────────────
 
 function formatFalPrice(price: FalPriceEntry | undefined): string {
-  if (!price) return "Pricing requires FAL_KEY";
+  if (!price) return "Pricing unavailable";
   if (price.unit_price === 0) return "FREE";
   return `$${price.unit_price.toFixed(4)} / ${price.unit}`;
 }

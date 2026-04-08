@@ -6,6 +6,8 @@ import { handleListModels } from "./tools/list.js";
 import { handleGetModelInfo } from "./tools/info.js";
 import { handleEstimateCost } from "./tools/estimate.js";
 import { handleWhatsNew } from "./tools/discover.js";
+import { handleFindCheapestProvider } from "./tools/shop.js";
+import { handleBatchGetPricing } from "./tools/batch.js";
 import { TOOL_DEFINITIONS } from "./server.js";
 import type { UnifiedModel } from "./types.js";
 
@@ -83,6 +85,34 @@ const MOCK_MODELS: UnifiedModel[] = [
     qualityTier: "A",
     contextLength: 131072,
     addedDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  // ─── New: multi-provider models for cross-provider testing ──────
+  {
+    id: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+    name: "Llama 3.3 70B Instruct Turbo",
+    provider: "together",
+    description: "Meta's Llama 3.3 on Together AI.",
+    category: "llm",
+    pricing: { unit: "token", unitPrice: 0.00000088, inputPrice: 0.00000088, outputPrice: 0.00000088, formatted: "$0.88/$0.88 per 1M tokens (in/out)" },
+    capabilities: [],
+  },
+  {
+    id: "accounts/fireworks/models/llama-v3p3-70b-instruct",
+    name: "llama v3p3 70b instruct",
+    provider: "fireworks",
+    description: "Meta's Llama 3.3 on Fireworks.",
+    category: "llm",
+    pricing: { unit: "token", unitPrice: 0.0000009, inputPrice: 0.0000009, outputPrice: 0.0000009, formatted: "$0.90/$0.90 per 1M tokens (in/out)" },
+    capabilities: [],
+  },
+  {
+    id: "black-forest-labs/flux-1.1-pro",
+    name: "Flux 1.1 Pro",
+    provider: "replicate",
+    description: "FLUX Pro on Replicate.",
+    category: "text-to-image",
+    pricing: { unit: "image", unitPrice: 0.04, formatted: "$0.0400 / image" },
+    capabilities: ["image_generation"],
   },
 ];
 
@@ -259,11 +289,71 @@ describe("handleWhatsNew", () => {
   });
 });
 
+// ─── find_cheapest_provider ─────────────────────────────────────────────────
+
+describe("handleFindCheapestProvider", () => {
+  it("finds the same model across multiple providers", () => {
+    const result = handleFindCheapestProvider(MOCK_MODELS, { model: "llama 3.3 70b" });
+    const text = result.content[0].text;
+    // Should find openrouter, together, and fireworks entries
+    assert.ok(text.includes("openrouter"));
+    assert.ok(text.includes("together"));
+    assert.ok(text.includes("fireworks"));
+    assert.ok(text.includes("Cheapest"));
+  });
+
+  it("finds media models across providers", () => {
+    const result = handleFindCheapestProvider(MOCK_MODELS, { model: "flux pro" });
+    const text = result.content[0].text;
+    // Should find fal and replicate entries
+    assert.ok(text.includes("fal") || text.includes("replicate"));
+  });
+
+  it("returns error for missing model param", () => {
+    const result = handleFindCheapestProvider(MOCK_MODELS, {});
+    assert.equal(result.isError, true);
+  });
+
+  it("handles no matches gracefully", () => {
+    const result = handleFindCheapestProvider(MOCK_MODELS, { model: "nonexistent-xyz-model-9999" });
+    const text = result.content[0].text;
+    assert.ok(text.includes("No models matching"));
+  });
+});
+
+// ─── batch_get_pricing ──────────────────────────────────────────────────────
+
+describe("handleBatchGetPricing", () => {
+  it("returns pricing for multiple models", () => {
+    const result = handleBatchGetPricing(MOCK_MODELS, {
+      model_ids: ["openai/gpt-4o", "fal-ai/flux-pro/v1.1"],
+    });
+    const text = result.content[0].text;
+    assert.ok(text.includes("GPT-4o"));
+    assert.ok(text.includes("Flux Pro"));
+    assert.ok(text.includes("Batch Pricing"));
+  });
+
+  it("shows not-found models", () => {
+    const result = handleBatchGetPricing(MOCK_MODELS, {
+      model_ids: ["openai/gpt-4o", "nonexistent/model"],
+    });
+    const text = result.content[0].text;
+    assert.ok(text.includes("Not Found"));
+    assert.ok(text.includes("nonexistent/model"));
+  });
+
+  it("returns error for missing model_ids", () => {
+    const result = handleBatchGetPricing(MOCK_MODELS, {});
+    assert.equal(result.isError, true);
+  });
+});
+
 // ─── TOOL_DEFINITIONS ───────────────────────────────────────────────────────
 
 describe("TOOL_DEFINITIONS", () => {
-  it("exports exactly 6 tools", () => {
-    assert.equal(TOOL_DEFINITIONS.length, 6);
+  it("exports exactly 8 tools", () => {
+    assert.equal(TOOL_DEFINITIONS.length, 8);
   });
 
   it("all tools have name, description, and inputSchema", () => {
@@ -283,6 +373,8 @@ describe("TOOL_DEFINITIONS", () => {
       "get_model_info",
       "estimate_cost",
       "whats_new",
+      "find_cheapest_provider",
+      "batch_get_pricing",
     ]);
   });
 });

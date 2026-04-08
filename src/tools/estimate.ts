@@ -49,7 +49,7 @@ export function handleEstimateCost(
     const units = usage.units ?? usage.images ?? usage.seconds ?? usage.requests ?? 1;
 
     if (model.pricing.unitPrice < 0) {
-      lines.push(`⚠️ Pricing data unavailable. Set FAL_KEY for fal.ai pricing.`);
+      lines.push(`⚠️ Pricing data unavailable for this model.`);
       return { content: [{ type: "text" as const, text: lines.join("\n") }] };
     }
 

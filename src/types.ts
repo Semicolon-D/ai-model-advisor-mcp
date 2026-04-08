@@ -17,7 +17,7 @@ export type ModelCategory =
 
 export type QualityTier = "S" | "A" | "B" | "C";
 
-export type ProviderName = "openrouter" | "fal";
+export type ProviderName = "openrouter" | "fal" | "together" | "replicate" | "fireworks";
 
 // ─── Unified Model ──────────────────────────────────────────────────────────
 

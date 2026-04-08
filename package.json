@@ -1,7 +1,7 @@
 {
   "name": "ai-model-advisor-mcp",
-  "version": "1.0.0",
-  "description": "The most comprehensive AI model advisor MCP. Compare pricing, capabilities, and quality across 500+ models — LLMs, image gen, video gen, TTS, STT, and 3D — from OpenRouter and fal.ai.",
+  "version": "2.0.0",
+  "description": "The most comprehensive AI model advisor MCP. Compare pricing, capabilities, and quality across 1000+ models from 5 providers — OpenRouter, fal.ai, Together AI, Replicate, and Fireworks AI.",
   "type": "module",
   "main": "build/server.js",
   "bin": {
@@ -31,6 +31,9 @@
     "model-selection",
     "openrouter",
     "fal",
+    "together",
+    "replicate",
+    "fireworks",
     "image-generation",
     "video-generation",
     "text-to-speech",
