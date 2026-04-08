@@ -1,4 +1,4 @@
-# model-advisor-mcp
+# ai-model-advisor-mcp
 
 The most comprehensive AI model advisor MCP server. Compare pricing, capabilities, and quality across **500+ models** — LLMs, image gen, video gen, TTS, STT, and 3D — from OpenRouter and fal.ai.
 
@@ -26,7 +26,7 @@ Add to your MCP config:
   "mcpServers": {
     "model-advisor": {
       "command": "npx",
-      "args": ["-y", "model-advisor-mcp"],
+      "args": ["-y", "ai-model-advisor-mcp"],
       "env": {
         "FAL_KEY": "your-fal-key-here",
         "OPENROUTER_API_KEY": "your-openrouter-key-here"

@@ -1,11 +1,11 @@
 {
-  "name": "model-advisor-mcp",
+  "name": "ai-model-advisor-mcp",
   "version": "1.0.0",
   "description": "The most comprehensive AI model advisor MCP. Compare pricing, capabilities, and quality across 500+ models — LLMs, image gen, video gen, TTS, STT, and 3D — from OpenRouter and fal.ai.",
   "type": "module",
   "main": "build/server.js",
   "bin": {
-    "model-advisor-mcp": "build/cli.js"
+    "ai-model-advisor-mcp": "build/cli.js"
   },
   "files": [
     "build",
