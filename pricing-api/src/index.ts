@@ -103,7 +103,47 @@ async function fetchFal(apiKey: string): Promise<ModelPricing[]> {
   const listData: any = await listRes.json();
   const models = listData.items ?? [];
 
-  // The old fal pricing API route was removed. We have to parse pricingInfoOverride.
+  // Hardcode essential media models that are missing from fal's public models gallery endpoint
+  models.push(
+    {
+      id: "fal-ai/whisper",
+      title: "Whisper",
+      category: "speech-to-text",
+      publishedAt: new Date("2023-11-01").toISOString(),
+    },
+    {
+      id: "fal-ai/playht/tts/v3",
+      title: "PlayHT v3 TTS",
+      category: "text-to-speech",
+      publishedAt: new Date("2024-05-01").toISOString(),
+    }
+  );
+
+  // Step 2: Get pricing via the official API (requires Key)
+  const ids = models.map((m: any) => m.endpoint_id ?? m.id).filter(Boolean);
+  const pricingMap = new Map<string, { unit_price: number; unit: string }>();
+
+  // Batch in groups of 50
+  for (let i = 0; i < ids.length; i += 50) {
+    const batch = ids.slice(i, i + 50);
+    const params = batch.map((id: string) => `endpoint_id=${id.startsWith("fal-ai/") ? id : `fal-ai/${id}`}`).join("&");
+
+    try {
+      const priceRes = await fetch(`https://api.fal.ai/v1/models/pricing?${params}`, {
+        headers: { Authorization: `Key ${apiKey}` },
+      });
+      if (priceRes.ok) {
+        const priceData: any = await priceRes.json();
+        for (const p of priceData.prices ?? []) {
+          pricingMap.set(p.endpoint_id, p);
+        }
+      }
+    } catch {
+      // Skip batch on error
+    }
+  }
+
+  // Fallback parsing just in case
   function parseFalPricing(text: string | null | undefined) {
     if (!text) return { unitPrice: -1, unit: "unknown" };
     
@@ -125,7 +165,19 @@ async function fetchFal(apiKey: string): Promise<ModelPricing[]> {
   return models.map((m: any): ModelPricing => {
     const rawId = m.endpoint_id ?? m.id;
     const id = rawId.startsWith("fal-ai/") ? rawId : `fal-ai/${rawId}`;
-    const price = parseFalPricing(m.pricingInfoOverride);
+    
+    const apiPrice = pricingMap.get(id);
+    let unit = "unknown";
+    let unitPrice = -1;
+
+    if (apiPrice) {
+      unit = apiPrice.unit;
+      unitPrice = apiPrice.unit_price;
+    } else {
+      const fallback = parseFalPricing(m.pricingInfoOverride);
+      unit = fallback.unit;
+      unitPrice = fallback.unitPrice;
+    }
 
     return {
       id,
@@ -133,9 +185,9 @@ async function fetchFal(apiKey: string): Promise<ModelPricing[]> {
       provider: "fal",
       category: inferFalCategory(m),
       pricing: {
-        unit: price.unit,
-        unitPrice: price.unitPrice,
-        formatted: price.unitPrice >= 0 ? `$${price.unitPrice.toFixed(4)} / ${price.unit}` : "Pricing unavailable",
+        unit,
+        unitPrice,
+        formatted: unitPrice >= 0 ? `$${unitPrice.toFixed(4)} / ${unit}` : "Pricing unavailable",
       },
       addedDate: m.publishedAt ?? m.date ?? undefined,
     };
@@ -143,11 +195,13 @@ async function fetchFal(apiKey: string): Promise<ModelPricing[]> {
 }
 
 function inferFalCategory(m: any): string {
+  if (m.category === "speech-to-text" || m.category === "text-to-speech") return m.category;
   const text = `${m.title ?? ""} ${m.category ?? ""} ${m.tags?.join(" ") ?? ""}`.toLowerCase();
+  
   if (text.includes("video") || text.includes("i2v") || text.includes("t2v")) return "text-to-video";
   if (text.includes("image") || text.includes("flux") || text.includes("stable-diffusion") || text.includes("sdxl")) return "text-to-image";
-  if (text.includes("speech") || text.includes("tts") || text.includes("kokoro")) return "text-to-speech";
-  if (text.includes("whisper") || text.includes("wizper") || text.includes("stt")) return "speech-to-text";
+  if (text.includes("speech-to-text") || text.includes("whisper") || text.includes("wizper") || text.includes("stt") || text.includes("transcri")) return "speech-to-text";
+  if (text.includes("text-to-speech") || text.includes("speech") || text.includes("tts") || text.includes("kokoro")) return "text-to-speech";
   if (text.includes("3d") || text.includes("mesh")) return "image-to-3d";
   if (text.includes("llm") || text.includes("chat")) return "llm";
   return "other";
@@ -202,6 +256,24 @@ async function fetchReplicate(apiKey: string): Promise<ModelPricing[]> {
     url = data.next ?? undefined;
     pages++;
   }
+
+  // Hardcode essential media models that are missing from replicate's public models gallery endpoint
+  models.push(
+    {
+      owner: "openai",
+      name: "whisper",
+      description: "Convert speech to text",
+      created_at: new Date("2023-10-01").toISOString(),
+      visibility: "public",
+    },
+    {
+      owner: "suno-ai",
+      name: "bark",
+      description: "Text-to-audio model",
+      created_at: new Date("2024-01-01").toISOString(),
+      visibility: "public",
+    }
+  );
 
   return models
     .filter((m) => m.visibility === "public")
