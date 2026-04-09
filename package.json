@@ -1,6 +1,6 @@
 {
   "name": "ai-model-advisor-mcp",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "An intelligent Model Context Protocol (MCP) Server that acts as an AI model advisor. Compare LLM and media pricing, features, and quality across 1,000+ models from OpenRouter, fal.ai, Together AI, Replicate, and Fireworks AI. Deeply compatible with Claude Desktop and Cursor.",
   "type": "module",
   "main": "build/server.js",
