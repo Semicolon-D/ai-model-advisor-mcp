@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { getAllModels } from "./providers/registry.js";
 import { handleListModels } from "./tools/list.js";
 import { handleGetModelInfo } from "./tools/info.js";
+import { handleRecommendModel } from "./tools/recommend.js";
 
 /**
  * End-to-End Tests for model-advisor-mcp
@@ -51,5 +52,20 @@ describe("E2E - Cloudflare Worker Integration", { timeout: 15_000 }, () => {
     const infoText = infoResult.content[0].text;
     assert.ok(infoText.includes("GPT-4o"), "Missing model name in card");
     assert.ok(infoText.includes("Pricing"), "Missing pricing info");
+  });
+
+  it("should properly recommend text-to-speech and other media models", async () => {
+    const models = await getAllModels();
+    
+    // Check TTS
+    const ttsResult = handleRecommendModel(models, { task: "text to speech generation and audio voices" });
+    assert.equal(ttsResult.isError ?? false, false);
+    const ttsText = ttsResult.content[0].text;
+    assert.ok(ttsText.toLowerCase().includes("speech") || ttsText.toLowerCase().includes("audio") || ttsText.toLowerCase().includes("voice"), "Should contain TTS/audio models");
+    
+    // Check Video
+    const videoResult = handleRecommendModel(models, { task: "video generation from text" });
+    const videoText = videoResult.content[0].text;
+    assert.ok(videoText.toLowerCase().includes("video") || videoText.toLowerCase().includes("kling") || videoText.toLowerCase().includes("luma"), "Should contain video models");
   });
 });

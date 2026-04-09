@@ -1,31 +1,38 @@
 import type { UnifiedModel } from "../types.js";
+import { modelMatchScore } from "../utils/fuzzy.js";
 
 export function handleGetModelInfo(
   models: UnifiedModel[],
   args: Record<string, unknown>
 ) {
   const modelId = String(args.model_id ?? "");
-  const model = models.find((m) => m.id === modelId);
+  let model = models.find((m) => m.id === modelId);
 
   if (!model) {
-    const fuzzy = models
-      .filter((m) => m.id.toLowerCase().includes(modelId.toLowerCase()))
-      .slice(0, 8);
+    const scored = models
+      .map((m) => ({ model: m, score: modelMatchScore(modelId, m.id, m.name) }))
+      .sort((a, b) => b.score - a.score);
 
-    if (fuzzy.length > 0) {
-      const suggestions = fuzzy.map((m) => `  ${m.id} (${m.provider}, ${m.category})`).join("\n");
+    if (scored.length > 0 && scored[0].score >= 80) {
+      model = scored[0].model;
+    } else {
+      const fuzzy = scored.filter((s) => s.score > 0).slice(0, 8).map((s) => s.model);
+
+      if (fuzzy.length > 0) {
+        const suggestions = fuzzy.map((m) => `  ${m.id} (${m.provider}, ${m.category})`).join("\n");
+        return {
+          content: [{
+            type: "text" as const,
+            text: `Model "${modelId}" not found. Did you mean one of these?\n${suggestions}`,
+          }],
+          isError: true,
+        };
+      }
       return {
-        content: [{
-          type: "text" as const,
-          text: `Model "${modelId}" not found. Did you mean one of these?\n${suggestions}`,
-        }],
+        content: [{ type: "text" as const, text: `Model "${modelId}" not found.` }],
         isError: true,
       };
     }
-    return {
-      content: [{ type: "text" as const, text: `Model "${modelId}" not found.` }],
-      isError: true,
-    };
   }
 
   const lines: string[] = [

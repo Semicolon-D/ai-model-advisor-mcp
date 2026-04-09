@@ -18,12 +18,27 @@ export function handleListModels(
   if (provider) {
     filtered = filtered.filter((m) => m.provider === provider);
   }
+  const CAP_ALIASES: Record<string, string[]> = {
+    tool_use: ["tool", "tools", "tool_use", "function"],
+    reasoning: ["reason", "reasoning", "think", "cot"],
+    vision: ["vision", "vlm", "image_to_text", "visual"],
+  };
+
   if (capability) {
     const cap = capability.toLowerCase();
+    
+    let terms = [cap];
+    for (const [key, aliases] of Object.entries(CAP_ALIASES)) {
+      if (key === cap || aliases.includes(cap)) {
+        terms = [key, ...aliases];
+        break;
+      }
+    }
+
     filtered = filtered.filter(
       (m) =>
-        m.capabilities.some((c) => c.toLowerCase().includes(cap)) ||
-        m.tags?.some((t) => t.toLowerCase().includes(cap))
+        m.capabilities.some((c) => terms.some((t) => c.toLowerCase().includes(t))) ||
+        (m.tags && m.tags.some((tag) => terms.some((t) => tag.toLowerCase().includes(t))))
     );
   }
   if (maxPrice !== undefined && maxPrice >= 0) {

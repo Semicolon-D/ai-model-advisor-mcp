@@ -114,6 +114,15 @@ const MOCK_MODELS: UnifiedModel[] = [
     pricing: { unit: "image", unitPrice: 0.04, formatted: "$0.0400 / image" },
     capabilities: ["image_generation"],
   },
+  {
+    id: "mock/tts-audio-model",
+    name: "Mock TTS Voice",
+    provider: "fal",
+    description: "Incredible text-to-speech engine for natural voices.",
+    category: "text-to-speech",
+    pricing: { unit: "second", unitPrice: 0.002, formatted: "$0.002 / second" },
+    capabilities: [],
+  },
 ];
 
 // ─── recommend_model ────────────────────────────────────────────────────────
@@ -156,6 +165,23 @@ describe("handleRecommendModel", () => {
     const result = handleRecommendModel(MOCK_MODELS, {});
     assert.equal(result.isError, true);
   });
+
+  it("prioritizes explicit requirements over spurious category matches", () => {
+    const result = handleRecommendModel(MOCK_MODELS, { 
+      task: "JSON parsing and reasoning for film/video clips",
+      requirements: ["tool_use"]
+    });
+    const text = result.content[0].text;
+    // Task includes "video", but requirements specify "tool_use", so LLMs should rank above video models
+    // GPT-4o or Llama should rank at the top
+    assert.ok(text.indexOf("GPT-4o") < text.indexOf("Kling") || text.indexOf("Llama") < text.indexOf("Kling") || !text.includes("Kling"));
+  });
+
+  it("recommends text-to-speech models correctly", () => {
+    const result = handleRecommendModel(MOCK_MODELS, { task: "text-to-speech generation" });
+    const text = result.content[0].text;
+    assert.ok(text.includes("Mock TTS Voice"));
+  });
 });
 
 // ─── compare_models ─────────────────────────────────────────────────────────
@@ -189,6 +215,16 @@ describe("handleCompareModels", () => {
     });
     assert.equal(result.isError, true);
   });
+
+  it("auto-resolves models with fuzzy IDs in compare", () => {
+    // "llama v3p3 70b instruct" has ID "accounts/fireworks/models/llama-v3p3-70b-instruct"
+    const result = handleCompareModels(MOCK_MODELS, {
+      model_ids: ["llama 3.3 70b instruct"],
+    });
+    assert.equal(result.isError ?? false, false);
+    const text = result.content[0].text;
+    assert.ok(text.includes("accounts/fireworks/models/llama-v3p3-70b-instruct") || text.includes("meta-llama/llama-3.3-70b-instruct"));
+  });
 });
 
 // ─── list_models ────────────────────────────────────────────────────────────
@@ -213,6 +249,14 @@ describe("handleListModels", () => {
     const text = result.content[0].text;
     assert.ok(text.includes("Llama") || text.includes("FREE"));
   });
+
+  it("filters via capability aliases", () => {
+    // Searching for "function" should alias to "tool_use" and find GPT-4o
+    const result = handleListModels(MOCK_MODELS, { capability: "function" });
+    const text = result.content[0].text;
+    assert.ok(text.includes("gpt-4o"));
+    assert.ok(!text.includes("flux"));
+  });
 });
 
 // ─── get_model_info ─────────────────────────────────────────────────────────
@@ -236,10 +280,10 @@ describe("handleGetModelInfo", () => {
     assert.ok(text.includes("photorealistic"));
   });
 
-  it("suggests similar models for typos", () => {
+  it("resolves similar models for typos automatically", () => {
     const result = handleGetModelInfo(MOCK_MODELS, { model_id: "flux" });
-    assert.equal(result.isError, true);
-    assert.ok(result.content[0].text.includes("Did you mean"));
+    assert.equal(result.isError ?? false, false);
+    assert.ok(result.content[0].text.includes("Flux Pro"));
   });
 });
 

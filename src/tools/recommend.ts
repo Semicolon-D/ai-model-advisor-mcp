@@ -43,19 +43,27 @@ function resolveCategories(task: string): ModelCategory[] {
   return [];
 }
 
-function matchesRequirements(model: UnifiedModel, requirements: string[]): number {
+function matchesRequirements(model: UnifiedModel, allTerms: string[], explicitReqs: string[]): { score: number, isRelevant: boolean } {
   let score = 0;
-  const lower = requirements.map((r) => r.toLowerCase());
+  let hasRelevance = false;
 
-  for (const req of lower) {
-    // Check capabilities
-    if (model.capabilities.some((c) => c.toLowerCase().includes(req))) score += 2;
-    // Check tags
-    if (model.tags?.some((t) => t.toLowerCase().includes(req))) score += 1;
-    // Check description
-    if (model.description.toLowerCase().includes(req)) score += 1;
-    // Check name
-    if (model.name.toLowerCase().includes(req)) score += 1;
+  const terms = allTerms.filter(Boolean).map((t) => t.toLowerCase().trim());
+  const reqs = explicitReqs.filter(Boolean).map((r) => r.toLowerCase().trim());
+
+  // 1. Explicit requirements (user checked a box or typed a specific capability)
+  for (const req of reqs) {
+    if (model.capabilities.some((c) => c.toLowerCase().includes(req) || c.replace(/_/g, " ").includes(req))) {
+      score += 50; // Massively weight explicitly requested capabilities
+      hasRelevance = true;
+    }
+  }
+
+  // 2. Text matches against all terms (task + reqs)
+  for (const term of terms) {
+    if (model.capabilities.some((c) => c.toLowerCase().includes(term))) { score += 5; hasRelevance = true; }
+    if (model.tags?.some((t) => t.toLowerCase().includes(term))) { score += 2; hasRelevance = true; }
+    if (model.description.toLowerCase().includes(term)) { score += 1; hasRelevance = true; }
+    if (model.name.toLowerCase().includes(term)) { score += 1; hasRelevance = true; }
   }
 
   // Quality tier bonus
@@ -64,31 +72,22 @@ function matchesRequirements(model: UnifiedModel, requirements: string[]): numbe
   else if (model.qualityTier === "B") score += 2;
   else if (model.qualityTier === "C") score += 1;
 
-  // Benchmark and speed bonuses based on actual text
-  const reqStr = lower.join(" ");
+  // Benchmark and speed bonuses
+  const reqStr = terms.join(" ");
   if (reqStr.includes("fast") || reqStr.includes("speed")) {
-    if (model.speed?.throughput) {
-      if (model.speed.throughput > 100) score += 4;
-      else if (model.speed.throughput > 50) score += 2;
-    }
-    if (model.speed?.ttft && model.speed.ttft < 0.5) score += 2;
+    if (model.speed?.throughput && model.speed.throughput > 50) { score += 4; hasRelevance = true; }
+    if (model.speed?.ttft && model.speed.ttft < 0.5) { score += 2; hasRelevance = true; }
   }
   
   if (reqStr.includes("code") || reqStr.includes("coding")) {
-    if (model.benchmarks?.coding) {
-      if (model.benchmarks.coding > 80) score += 4;
-      else if (model.benchmarks.coding > 60) score += 2;
-    }
+    if (model.benchmarks?.coding && model.benchmarks.coding > 60) { score += 4; hasRelevance = true; }
   }
 
-  if (reqStr.includes("smart") || reqStr.includes("intelligence") || reqStr.includes("reasoning")) {
-    if (model.benchmarks?.mmlu) {
-      if (model.benchmarks.mmlu > 85) score += 4;
-      else if (model.benchmarks.mmlu > 75) score += 2;
-    }
+  if (reqStr.includes("smart") || reqStr.includes("intelligence") || reqStr.includes("reason") || reqStr.includes("think")) {
+    if (model.benchmarks?.mmlu && model.benchmarks.mmlu > 75) { score += 4; hasRelevance = true; }
   }
 
-  return score;
+  return { score, isRelevant: hasRelevance };
 }
 
 export function handleRecommendModel(
@@ -107,31 +106,42 @@ export function handleRecommendModel(
     };
   }
 
-  // Filter by category
-  const categories = resolveCategories(task);
-  let candidates = categories.length > 0
-    ? models.filter((m) => categories.includes(m.category))
-    : models.filter((m) =>
-        m.name.toLowerCase().includes(task.toLowerCase()) ||
-        m.description.toLowerCase().includes(task.toLowerCase())
-      );
+  // Analyze text to find potential categories (e.g. "image gen" -> text-to-image)
+  const combinedText = [task, ...requirements].join(" ");
+  const categories = resolveCategories(combinedText);
+
+  let candidates = models;
 
   // Budget filter
   if (budget === "free") {
     candidates = candidates.filter((m) => m.pricing.unitPrice === 0);
   } else if (budget === "low") {
     candidates = candidates.filter((m) => m.pricing.unitPrice >= 0);
-    candidates.sort((a, b) => a.pricing.unitPrice - b.pricing.unitPrice);
   }
 
   // Score and rank
-  const scored = candidates.map((m) => ({
-    model: m,
-    score: matchesRequirements(m, [task, ...requirements]),
-  }));
+  const scored = candidates.map((m) => {
+    let { score, isRelevant } = matchesRequirements(m, [task, ...requirements], requirements);
+    
+    // Massive boost if model matches the inferred category
+    if (categories.includes(m.category)) {
+      score += 20;
+      isRelevant = true;
+    }
+    
+    // Boost if model name/description directly contains the task string
+    if (task.length > 3 && (m.name.toLowerCase().includes(task.toLowerCase()) || m.description.toLowerCase().includes(task.toLowerCase()))) {
+      score += 5;
+      isRelevant = true;
+    }
+    
+    return { model: m, score, isRelevant };
+  });
 
   scored.sort((a, b) => b.score - a.score);
-  const results = scored.slice(0, limit);
+  // Only keep models with relevance
+  const validScored = scored.filter((s) => s.isRelevant);
+  const results = validScored.slice(0, limit);
 
   if (results.length === 0) {
     return {
