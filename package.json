@@ -9,6 +9,8 @@
   },
   "files": [
     "build",
+    "!build/**/*.test.*",
+    "!build/e2e.*",
     "README.md",
     "LICENSE"
   ],

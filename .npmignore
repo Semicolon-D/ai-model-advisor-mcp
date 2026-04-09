@@ -1,0 +1,31 @@
+# Source code (published package only needs build/)
+src/
+tsconfig.json
+test-published-package.js
+
+# Pricing API (Cloudflare Worker - separate deployment)
+pricing-api/
+
+# Dev & config files
+.gitignore
+.github/
+.vscode/
+.idea/
+.wrangler/
+.DS_Store
+
+# Env & secrets
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+*.secret
+*.local
+
+# Test artifacts
+*.test.js
+*.test.d.ts
+*.test.js.map
+*.test.d.ts.map
+build/e2e.test.*
+build/server.test.*

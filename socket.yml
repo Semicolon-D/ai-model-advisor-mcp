@@ -1,0 +1,24 @@
+# Socket.dev configuration
+# https://docs.socket.dev/docs/socket-yml
+version: 2
+
+# Dependency alert settings
+issueRules:
+  # These are expected behaviors from @modelcontextprotocol/sdk's Express transport
+  networkAccess:
+    action: warn
+  shellAccess:
+    action: warn
+  envVars:
+    action: warn
+  usesEval:
+    action: warn
+  # Keep these as errors (actual supply chain threats)
+  installScripts:
+    action: error
+  telemetry:
+    action: error
+  obfuscatedCode:
+    action: error
+  nativeCode:
+    action: warn

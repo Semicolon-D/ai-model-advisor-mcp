@@ -9,3 +9,17 @@ build/
 .dev.vars
 .dev.vars.*
 *.local
+*.secret
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Wrangler local state
+.wrangler/
+
+# npm debug logs
+npm-debug.log*
