@@ -35,6 +35,10 @@ interface APIModel {
     coding?: number;
     math?: number;
   };
+  addedDate?: string;
+  contextLength?: number;
+  maxOutputTokens?: number;
+  capabilities?: string[];
 }
 
 interface APIResponse {
@@ -68,9 +72,12 @@ async function fetchFromPricingAPI(): Promise<UnifiedModel[]> {
       outputPrice: m.pricing.outputPrice,
       formatted: m.pricing.formatted,
     },
-    capabilities: [],
+    capabilities: m.capabilities ?? [],
     speed: m.speed,
     benchmarks: m.benchmarks,
+    addedDate: m.addedDate,
+    contextLength: m.contextLength,
+    maxOutputTokens: m.maxOutputTokens,
   }));
 }
 

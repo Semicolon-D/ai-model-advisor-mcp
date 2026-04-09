@@ -42,6 +42,10 @@ interface ModelPricing {
     coding?: number;
     math?: number;
   };
+  addedDate?: string;
+  contextLength?: number;
+  maxOutputTokens?: number;
+  capabilities?: string[];
 }
 
 interface PricingSnapshot {
@@ -61,6 +65,14 @@ async function fetchOpenRouter(): Promise<ModelPricing[]> {
     const promptCost = parseFloat(m.pricing.prompt) * 1_000_000;
     const completionCost = parseFloat(m.pricing.completion) * 1_000_000;
 
+    // capabilities
+    const caps: string[] = [];
+    if (m.supported_parameters?.includes("tools") || m.description?.toLowerCase().includes("function calling")) caps.push("tool_use");
+    if (m.architecture?.input_modalities?.includes("image") || m.architecture?.modality?.includes("image")) caps.push("vision");
+    const descText = (m.description ?? "").toLowerCase();
+    const isReasoning = m.name.toLowerCase().includes("reasoning") || m.name.toLowerCase().includes("think") || descText.includes("reasoning") || descText.includes("chain of thought") || m.id.includes("o1") || m.id.includes("o3") || m.id.includes("r1") || m.id.includes("deepseek-reasoner");
+    if (isReasoning) caps.push("reasoning");
+
     return {
       id: m.id,
       name: m.name,
@@ -76,6 +88,10 @@ async function fetchOpenRouter(): Promise<ModelPricing[]> {
             ? "FREE"
             : `$${promptCost.toFixed(2)}/$${completionCost.toFixed(2)} per 1M tokens (in/out)`,
       },
+      addedDate: m.created ? new Date(m.created * 1000).toISOString() : undefined,
+      contextLength: m.context_length ?? m.top_provider?.context_length,
+      maxOutputTokens: m.top_provider?.max_completion_tokens ?? undefined,
+      capabilities: caps,
     };
   });
 }
@@ -87,46 +103,41 @@ async function fetchFal(apiKey: string): Promise<ModelPricing[]> {
   const listData: any = await listRes.json();
   const models = listData.items ?? [];
 
-  // Step 2: Get pricing (requires key)
-  const ids = models.map((m: any) => m.endpoint_id ?? m.id).filter(Boolean);
-  const pricingMap = new Map<string, any>();
+  // The old fal pricing API route was removed. We have to parse pricingInfoOverride.
+  function parseFalPricing(text: string | null | undefined) {
+    if (!text) return { unitPrice: -1, unit: "unknown" };
+    
+    let match = text.match(/\$(\d+\.\d+)\*\*\s+per second/i) || text.match(/every second.*?\$(\d+\.\d+)/i) || text.match(/\$(\d+\.\d+)\*\*\s*(?:without audio|\(audio off\))/i);
+    if (match) return { unitPrice: parseFloat(match[1]), unit: "second" };
+    
+    match = text.match(/\$(\d+\.\d+)\*\*\s+per megapixel/i) || text.match(/per megapixel.*?\$(\d+\.\d+)/i);
+    if (match) return { unitPrice: parseFloat(match[1]), unit: "megapixel" };
 
-  // Batch in groups of 50
-  for (let i = 0; i < ids.length; i += 50) {
-    const batch = ids.slice(i, i + 50);
-    const params = batch.map((id: string) => `endpoint_id=${encodeURIComponent(id)}`).join("&");
-
-    try {
-      const priceRes = await fetch(`https://fal.ai/api/v1/models/pricing?${params}`, {
-        headers: { Authorization: `Key ${apiKey}` },
-      });
-      if (priceRes.ok) {
-        const priceData: any = await priceRes.json();
-        for (const p of priceData.pricing ?? []) {
-          pricingMap.set(p.endpoint_id, p);
-        }
-      }
-    } catch {
-      // Skip batch on error
-    }
+    match = text.match(/\$(\d+\.\d+)\*\*\s+per image/i) || text.match(/per image.*?\$(\d+\.\d+)/i);
+    if (match) return { unitPrice: parseFloat(match[1]), unit: "image" };
+    
+    match = text.match(/\$(\d+\.\d+)/);
+    if (match) return { unitPrice: parseFloat(match[1]), unit: "request" };
+    
+    return { unitPrice: -1, unit: "unknown" };
   }
 
   return models.map((m: any): ModelPricing => {
-    const id = m.endpoint_id ?? m.id;
-    const price = pricingMap.get(id);
-    const unitPrice = price?.price ?? -1;
-    const unit = price?.unit ?? "unknown";
+    const rawId = m.endpoint_id ?? m.id;
+    const id = rawId.startsWith("fal-ai/") ? rawId : `fal-ai/${rawId}`;
+    const price = parseFalPricing(m.pricingInfoOverride);
 
     return {
-      id: `fal-ai/${id}`,
-      name: m.title ?? m.name ?? id,
+      id,
+      name: m.title ?? m.name ?? rawId,
       provider: "fal",
       category: inferFalCategory(m),
       pricing: {
-        unit,
-        unitPrice,
-        formatted: unitPrice >= 0 ? `$${unitPrice.toFixed(4)} / ${unit}` : "Pricing unavailable",
+        unit: price.unit,
+        unitPrice: price.unitPrice,
+        formatted: price.unitPrice >= 0 ? `$${price.unitPrice.toFixed(4)} / ${price.unit}` : "Pricing unavailable",
       },
+      addedDate: m.publishedAt ?? m.date ?? undefined,
     };
   });
 }
@@ -170,6 +181,8 @@ async function fetchTogether(apiKey: string): Promise<ModelPricing[]> {
               ? `$${inputPerM.toFixed(2)}/$${outputPerM.toFixed(2)} per 1M tokens (in/out)`
               : "Pricing unavailable",
         },
+        addedDate: m.created_at ? new Date(m.created_at * 1000).toISOString() : undefined,
+        contextLength: m.context_length,
       };
     });
 }
@@ -204,6 +217,7 @@ async function fetchReplicate(apiKey: string): Promise<ModelPricing[]> {
           unitPrice: -1,
           formatted: "See replicate.com/pricing",
         },
+        addedDate: m.created_at,
       };
     });
 }
@@ -392,7 +406,7 @@ async function refreshPricing(env: Env): Promise<PricingSnapshot> {
         }
       }
       
-      if (stats) {
+      if (stats && model.category === "llm") {
         const ttft = stats.median_time_to_first_token_seconds ?? undefined;
         const throughput = stats.median_output_tokens_per_second ?? undefined;
         const mmlu = stats.evaluations?.mmlu_pro != null ? stats.evaluations.mmlu_pro * 100 : undefined;
