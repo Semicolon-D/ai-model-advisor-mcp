@@ -89,7 +89,7 @@ export const TOOL_DEFINITIONS = [
         },
         max_price: {
           type: "number",
-          description: "Maximum price per unit in USD (e.g. 0 for free models)",
+          description: "Maximum price in USD. For LLMs: price per 1M tokens (e.g. 1.0 = $1/1M tokens). For media: price per unit (image, second, etc.). Use 0 for free models only.",
         },
         limit: {
           type: "number",

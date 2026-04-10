@@ -70,8 +70,8 @@ export function handleCompareModels(
     const capFlag = (m: UnifiedModel, ...caps: string[]) =>
       m.capabilities.some(c => caps.some(alias => c.toLowerCase().includes(alias))) ? "✅" : "❌";
 
-    const fmtSpeed = (n?: number) => n !== undefined ? n.toFixed(1) : "—";
-    const fmtMMLU = (n?: number) => n !== undefined ? n.toFixed(1) : "—";
+    const fmtSpeed = (n?: number) => (n !== undefined && n > 0) ? n.toFixed(1) : "—";
+    const fmtMMLU = (n?: number) => (n !== undefined && n > 0) ? n.toFixed(1) : "—";
 
     header = `| Model | Provider | Avail. | Pricing | Context/Output | Speed (TTFT/Tps) | MMLU | Tools | Reason | Vision | Quality |`;
     separator = `|-------|----------|--------|---------|----------------|------------------|------|-------|--------|--------|---------|`;

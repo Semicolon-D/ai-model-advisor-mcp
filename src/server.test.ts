@@ -161,6 +161,14 @@ describe("handleRecommendModel", () => {
     assert.ok(!text.includes("GPT-4o")); // paid model
   });
 
+  it("filters by low budget and excludes expensive models", () => {
+    const result = handleRecommendModel(MOCK_MODELS, { task: "llm", budget: "low" });
+    const text = result.content[0].text;
+    assert.ok(text.includes("Llama")); // FREE — should pass
+    assert.ok(!text.includes("GPT-4o")); // $2.50/1M — should be excluded
+    assert.ok(!text.includes("Claude Sonnet 4")); // $3.00/1M — should be excluded
+  });
+
   it("returns error for missing task", () => {
     const result = handleRecommendModel(MOCK_MODELS, {});
     assert.equal(result.isError, true);
@@ -248,6 +256,14 @@ describe("handleListModels", () => {
     const result = handleListModels(MOCK_MODELS, { max_price: 0 });
     const text = result.content[0].text;
     assert.ok(text.includes("Llama") || text.includes("FREE"));
+  });
+
+  it("filters by max_price for LLMs using per-1M-token scale", () => {
+    const result = handleListModels(MOCK_MODELS, { category: "llm", max_price: 1.0 });
+    const text = result.content[0].text;
+    assert.ok(text.includes("llama-3.3-70b-instruct")); // FREE — should pass
+    assert.ok(!text.includes("gpt-4o"));                 // $2.50/1M — should be excluded
+    assert.ok(!text.includes("claude-sonnet-4"));         // $3.00/1M — should be excluded
   });
 
   it("filters via capability aliases", () => {
