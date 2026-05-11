@@ -44,7 +44,22 @@ The server works **entirely out-of-the-box**. Just add it to your MCP settings a
 
 That's it! Live pricing for **all 1,000+ models** across all 5 providers is fetched automatically using our hosted Cloudflare Worker Pricing API. No API keys, no environment variables, no setup.
 
-## Tools (8 total)
+## Tools (9 total)
+
+### 🧭 `select_model_for_project` ⭐ NEW
+
+One call for agents that already have project context. Returns the best overall model, cheapest acceptable model, and best value option without forcing the agent to manually chain several tools.
+
+```
+select_model_for_project({
+  project: "TypeScript MCP server for coding agents",
+  task: "coding assistant",
+  requirements: ["coding", "reasoning", "tool_use"],
+  expected_usage: { input_tokens: 5000000, output_tokens: 1000000 }
+})
+```
+
+The server searches the catalog behind the scenes and returns a compact decision with model IDs, provider, price, quality tier, reasons, tradeoffs, and structured output that agents can parse.
 
 ### 🏷️ `find_cheapest_provider` ⭐ NEW
 
@@ -175,7 +190,7 @@ Agent → MCP Server → Cloudflare Worker Pricing API (Our Hosted Backend)
                          └─ Fetches from Fireworks AI (12+ models)
 
 Unified Model Registry
-→ recommend, compare, list, info, estimate, shop, batch
+→ select, recommend, compare, list, info, estimate, shop, batch
 ```
 
 The MCP Server connects to our blazing-fast Cloudflare Worker that aggregates live pricing data across all 5 providers on a recurring 6-hour cron schedule. This gives your agent real-time pricing awareness without requiring you to juggle 5 different API keys.
