@@ -75,16 +75,16 @@ function matchesRequirements(model: UnifiedModel, allTerms: string[], explicitRe
   // Benchmark and speed bonuses
   const reqStr = terms.join(" ");
   if (reqStr.includes("fast") || reqStr.includes("speed")) {
-    if (model.speed?.throughput && model.speed.throughput > 50) { score += 4; hasRelevance = true; }
-    if (model.speed?.ttft && model.speed.ttft < 0.5) { score += 2; hasRelevance = true; }
+    if (model.speed?.throughput != null && model.speed.throughput > 50) { score += 4; hasRelevance = true; }
+    if (model.speed?.ttft != null && model.speed.ttft > 0 && model.speed.ttft < 0.5) { score += 2; hasRelevance = true; }
   }
   
   if (reqStr.includes("code") || reqStr.includes("coding")) {
-    if (model.benchmarks?.coding && model.benchmarks.coding > 60) { score += 4; hasRelevance = true; }
+    if (model.benchmarks?.coding != null && model.benchmarks.coding > 60) { score += 4; hasRelevance = true; }
   }
 
   if (reqStr.includes("smart") || reqStr.includes("intelligence") || reqStr.includes("reason") || reqStr.includes("think")) {
-    if (model.benchmarks?.mmlu && model.benchmarks.mmlu > 75) { score += 4; hasRelevance = true; }
+    if (model.benchmarks?.mmlu != null && model.benchmarks.mmlu > 75) { score += 4; hasRelevance = true; }
   }
 
   return { score, isRelevant: hasRelevance };
@@ -116,7 +116,13 @@ export function handleRecommendModel(
   if (budget === "free") {
     candidates = candidates.filter((m) => m.pricing.unitPrice === 0);
   } else if (budget === "low") {
-    candidates = candidates.filter((m) => m.pricing.unitPrice >= 0);
+    candidates = candidates.filter((m) => {
+      if (m.pricing.unitPrice < 0) return false;
+      const price = m.pricing.unit === "token"
+        ? m.pricing.unitPrice * 1_000_000
+        : m.pricing.unitPrice;
+      return price <= 1.0; // $1 per 1M tokens or $1 per media unit
+    });
   }
 
   // Score and rank

@@ -1,6 +1,6 @@
 {
   "name": "ai-model-advisor-mcp",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "An intelligent Model Context Protocol (MCP) Server that acts as an AI model advisor. Compare LLM and media pricing, features, and quality across 1,000+ models from OpenRouter, fal.ai, Together AI, Replicate, and Fireworks AI. Deeply compatible with Claude Desktop and Cursor.",
   "type": "module",
   "main": "build/server.js",
@@ -15,7 +15,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
+    "clean": "node -e \"require('fs').rmSync('build', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc",
     "start": "node build/cli.js",
     "dev": "tsc --watch",
     "test": "npm run build && node --test build/server.test.js",

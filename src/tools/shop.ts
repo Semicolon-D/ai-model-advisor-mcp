@@ -61,8 +61,8 @@ export function handleFindCheapestProvider(
     "",
   ];
 
-  // Determine if these are LLMs or media models
-  const isLLM = results.some((m) => m.category === "llm");
+  // Determine if these are LLMs or media models based on the BEST match (results[0])
+  const isLLM = results.length > 0 ? results[0].category === "llm" : false;
 
   if (isLLM) {
     lines.push(

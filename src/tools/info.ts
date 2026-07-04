@@ -73,10 +73,10 @@ export function handleGetModelInfo(
   }
 
   // Speed metrics
-  if (model.speed?.ttft !== undefined || model.speed?.throughput !== undefined) {
+  if ((model.speed?.ttft != null && model.speed.ttft > 0) || (model.speed?.throughput != null && model.speed.throughput > 0)) {
     lines.push(`## Speed`);
-    if (model.speed.ttft !== undefined) lines.push(`- Time to First Token: ${model.speed.ttft.toFixed(2)}s`);
-    if (model.speed.throughput !== undefined) lines.push(`- Throughput: ${model.speed.throughput.toFixed(1)} tokens/sec`);
+    if (model.speed!.ttft != null && model.speed!.ttft > 0) lines.push(`- Time to First Token: ${model.speed!.ttft.toFixed(2)}s`);
+    if (model.speed!.throughput != null && model.speed!.throughput > 0) lines.push(`- Throughput: ${model.speed!.throughput.toFixed(1)} tokens/sec`);
     lines.push("");
   }
 

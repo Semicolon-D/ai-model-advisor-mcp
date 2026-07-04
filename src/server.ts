@@ -12,11 +12,70 @@ import { handleEstimateCost } from "./tools/estimate.js";
 import { handleWhatsNew } from "./tools/discover.js";
 import { handleFindCheapestProvider } from "./tools/shop.js";
 import { handleBatchGetPricing } from "./tools/batch.js";
+import { handleSelectModelForProject } from "./tools/select.js";
 import type { UnifiedModel } from "./types.js";
 
 // ─── Tool Definitions ───────────────────────────────────────────────────────
 
 export const TOOL_DEFINITIONS = [
+  {
+    name: "select_model_for_project",
+    description:
+      "Pick the best overall, cheapest acceptable, and best value AI model for a project. Use this when an agent has project context and needs one decision instead of manually chaining recommend, compare, pricing, and cost tools. Returns concise markdown plus structured fields with candidates, scores, reasons, pricing, and tradeoffs.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        project: {
+          type: "string",
+          description:
+            'Project or repository context. Example: "TypeScript MCP server that needs a coding/reasoning model for agent workflows"',
+        },
+        task: {
+          type: "string",
+          description:
+            'Optional specific task. Examples: "coding assistant", "image generation", "video generation", "transcription"',
+        },
+        requirements: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            'Optional requirements. Examples: ["coding", "reasoning", "tool_use", "vision", "fast", "long_context"]',
+        },
+        budget: {
+          type: "string",
+          description: 'Optional budget constraint: "free", "low", or omit for any price',
+          enum: ["free", "low", "any"],
+        },
+        optimization_goal: {
+          type: "string",
+          description:
+            'Optional ranking goal for the candidate list: "balanced" (default), "best", or "cheapest"',
+          enum: ["balanced", "best", "cheapest"],
+        },
+        expected_usage: {
+          type: "object",
+          description:
+            "Optional usage estimate for cost-aware ranking. LLMs: {input_tokens, output_tokens, requests}. Media: {images, seconds, units, requests}",
+        },
+        limit: {
+          type: "number",
+          description: "Max candidate rows to return (default: 5, max: 20)",
+        },
+      },
+    },
+    outputSchema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "object" },
+        best_overall: { type: "object" },
+        cheapest_acceptable: { type: "object" },
+        best_value: { type: "object" },
+        candidates: { type: "array", items: { type: "object" } },
+        cost_basis: { type: "string" },
+      },
+      required: ["query", "candidates"],
+    },
+  },
   {
     name: "recommend_model",
     description:
@@ -89,7 +148,7 @@ export const TOOL_DEFINITIONS = [
         },
         max_price: {
           type: "number",
-          description: "Maximum price per unit in USD (e.g. 0 for free models)",
+          description: "Maximum price in USD. For LLMs: price per 1M tokens (e.g. 1.0 = $1/1M tokens). For media: price per unit (image, second, etc.). Use 0 for free models only.",
         },
         limit: {
           type: "number",
@@ -197,6 +256,7 @@ export const TOOL_DEFINITIONS = [
 type ToolHandler = (models: UnifiedModel[], args: Record<string, unknown>) => any;
 
 const HANDLER_MAP: Record<string, ToolHandler> = {
+  select_model_for_project: handleSelectModelForProject,
   recommend_model: handleRecommendModel,
   compare_models: handleCompareModels,
   list_models: handleListModels,

@@ -42,18 +42,24 @@ export function handleListModels(
     );
   }
   if (maxPrice !== undefined && maxPrice >= 0) {
-    filtered = filtered.filter(
-      (m) => m.pricing.unitPrice >= 0 && m.pricing.unitPrice <= maxPrice
-    );
+    filtered = filtered.filter((m) => {
+      if (m.pricing.unitPrice < 0) return false;
+      const comparePrice = m.pricing.unit === "token" 
+        ? m.pricing.unitPrice * 1_000_000 
+        : m.pricing.unitPrice;
+      return comparePrice <= maxPrice;
+    });
   }
 
   // Sort: quality tier first (S > A > B > C > unrated), then by price
   const tierOrder: Record<string, number> = { S: 0, A: 1, B: 2, C: 3 };
+  const normPrice = (m: { pricing: { unit: string; unitPrice: number } }) =>
+    m.pricing.unit === "token" ? m.pricing.unitPrice * 1_000_000 : m.pricing.unitPrice;
   filtered.sort((a, b) => {
     const ta = a.qualityTier ? tierOrder[a.qualityTier] : 9;
     const tb = b.qualityTier ? tierOrder[b.qualityTier] : 9;
     if (ta !== tb) return ta - tb;
-    return a.pricing.unitPrice - b.pricing.unitPrice;
+    return normPrice(a) - normPrice(b);
   });
 
   const results = filtered.slice(0, limit);

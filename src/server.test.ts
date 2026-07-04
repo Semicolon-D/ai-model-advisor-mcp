@@ -8,6 +8,7 @@ import { handleEstimateCost } from "./tools/estimate.js";
 import { handleWhatsNew } from "./tools/discover.js";
 import { handleFindCheapestProvider } from "./tools/shop.js";
 import { handleBatchGetPricing } from "./tools/batch.js";
+import { handleSelectModelForProject } from "./tools/select.js";
 import { TOOL_DEFINITIONS } from "./server.js";
 import type { UnifiedModel } from "./types.js";
 
@@ -161,6 +162,14 @@ describe("handleRecommendModel", () => {
     assert.ok(!text.includes("GPT-4o")); // paid model
   });
 
+  it("filters by low budget and excludes expensive models", () => {
+    const result = handleRecommendModel(MOCK_MODELS, { task: "llm", budget: "low" });
+    const text = result.content[0].text;
+    assert.ok(text.includes("Llama")); // FREE — should pass
+    assert.ok(!text.includes("GPT-4o")); // $2.50/1M — should be excluded
+    assert.ok(!text.includes("Claude Sonnet 4")); // $3.00/1M — should be excluded
+  });
+
   it("returns error for missing task", () => {
     const result = handleRecommendModel(MOCK_MODELS, {});
     assert.equal(result.isError, true);
@@ -181,6 +190,70 @@ describe("handleRecommendModel", () => {
     const result = handleRecommendModel(MOCK_MODELS, { task: "text-to-speech generation" });
     const text = result.content[0].text;
     assert.ok(text.includes("Mock TTS Voice"));
+  });
+});
+
+// ─── select_model_for_project ──────────────────────────────────────────────
+
+describe("handleSelectModelForProject", () => {
+  it("selects best, cheapest, and best value models for a coding project", () => {
+    const result = handleSelectModelForProject(MOCK_MODELS, {
+      project: "TypeScript MCP server for coding agents",
+      task: "coding assistant",
+      requirements: ["coding", "reasoning", "tool_use"],
+    });
+    const text = result.content[0].text;
+    const structured = result.structuredContent as {
+      best_overall: { id: string };
+      cheapest_acceptable: { id: string };
+      best_value: { id: string };
+      candidates: Array<{ id: string; reasons: string[] }>;
+    };
+
+    assert.ok(text.includes("Best overall"));
+    assert.equal(structured.best_overall.id, "anthropic/claude-sonnet-4");
+    assert.equal(structured.cheapest_acceptable.id, "meta-llama/llama-3.3-70b-instruct");
+    assert.ok(structured.best_value.id);
+    assert.ok(structured.candidates.length > 0);
+    assert.ok(structured.candidates[0].reasons.length > 0);
+  });
+
+  it("respects a low budget for project selection", () => {
+    const result = handleSelectModelForProject(MOCK_MODELS, {
+      project: "TypeScript repo that needs code help",
+      task: "coding",
+      requirements: ["tool_use"],
+      budget: "low",
+    });
+    const structured = result.structuredContent as {
+      best_overall: { id: string };
+      candidates: Array<{ id: string }>;
+    };
+
+    assert.equal(structured.best_overall.id, "meta-llama/llama-3.3-70b-instruct");
+    assert.ok(!structured.candidates.some((candidate) => candidate.id === "openai/gpt-4o"));
+  });
+
+  it("uses expected usage for cost-aware selection", () => {
+    const result = handleSelectModelForProject(MOCK_MODELS, {
+      project: "LLM feature that will process repository summaries",
+      task: "reasoning over code",
+      requirements: ["tool_use"],
+      expected_usage: { input_tokens: 1_000_000, output_tokens: 100_000 },
+    });
+    const structured = result.structuredContent as {
+      cheapest_acceptable: { id: string; estimatedCost: number | null };
+      cost_basis: string;
+    };
+
+    assert.equal(structured.cost_basis, "expected_usage");
+    assert.equal(structured.cheapest_acceptable.id, "meta-llama/llama-3.3-70b-instruct");
+    assert.equal(structured.cheapest_acceptable.estimatedCost, 0);
+  });
+
+  it("returns an error when project and task are missing", () => {
+    const result = handleSelectModelForProject(MOCK_MODELS, {});
+    assert.equal(result.isError, true);
   });
 });
 
@@ -248,6 +321,14 @@ describe("handleListModels", () => {
     const result = handleListModels(MOCK_MODELS, { max_price: 0 });
     const text = result.content[0].text;
     assert.ok(text.includes("Llama") || text.includes("FREE"));
+  });
+
+  it("filters by max_price for LLMs using per-1M-token scale", () => {
+    const result = handleListModels(MOCK_MODELS, { category: "llm", max_price: 1.0 });
+    const text = result.content[0].text;
+    assert.ok(text.includes("llama-3.3-70b-instruct")); // FREE — should pass
+    assert.ok(!text.includes("gpt-4o"));                 // $2.50/1M — should be excluded
+    assert.ok(!text.includes("claude-sonnet-4"));         // $3.00/1M — should be excluded
   });
 
   it("filters via capability aliases", () => {
@@ -398,8 +479,8 @@ describe("handleBatchGetPricing", () => {
 // ─── TOOL_DEFINITIONS ───────────────────────────────────────────────────────
 
 describe("TOOL_DEFINITIONS", () => {
-  it("exports exactly 8 tools", () => {
-    assert.equal(TOOL_DEFINITIONS.length, 8);
+  it("exports exactly 9 tools", () => {
+    assert.equal(TOOL_DEFINITIONS.length, 9);
   });
 
   it("all tools have name, description, and inputSchema", () => {
@@ -413,6 +494,7 @@ describe("TOOL_DEFINITIONS", () => {
   it("tool names match expected set", () => {
     const names = TOOL_DEFINITIONS.map((t) => t.name);
     assert.deepEqual(names, [
+      "select_model_for_project",
       "recommend_model",
       "compare_models",
       "list_models",
